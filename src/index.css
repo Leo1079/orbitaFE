@@ -1,0 +1,123 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
+
+:root {
+  --primary-color: #6366f1; /* Indigo 500 */
+  --secondary-color: #ec4899; /* Pink 500 */
+  --background-dark: #0f172a; /* Slate 900 */
+  --surface-dark: #1e293b; /* Slate 800 */
+  --text-primary: #ffffff; /* Blanco puro */
+  --text-secondary: #e0e0e0; /* Gris claro */
+  --glass-bg: rgba(30, 41, 59, 0.7);
+  --glass-border: rgba(255, 255, 255, 0.1);
+}
+
+body {
+  margin: 0;
+  font-family: 'Outfit', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: var(--background-dark);
+  color: var(--text-primary);
+  min-height: 100vh;
+}
+
+/* Glassmorphism Utilities */
+.glass-panel {
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 4px 6px -1px var(--shadow-color), 0 2px 4px -1px var(--shadow-color);
+  border-radius: 0.75rem;
+}
+
+.glass-header {
+  background: var(--surface-dark);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--glass-border);
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--surface-dark); 
+}
+::-webkit-scrollbar-thumb {
+  background: var(--surface-medium); 
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--surface-light); 
+}
+
+/* Bootstrap Overrides for Dark Mode */
+.card {
+  background-color: var(--surface-dark);
+  border: 1px solid var(--glass-border);
+  color: var(--text-primary);
+}
+
+.table {
+  color: var(--text-secondary);
+  --bs-table-bg: transparent;
+  --bs-table-border-color: var(--glass-border);
+}
+
+.table > :not(caption) > * > * {
+  border-bottom-color: var(--glass-border);
+}
+
+.modal-content {
+  background-color: var(--surface-dark);
+  border: 1px solid var(--glass-border);
+  color: var(--text-primary);
+}
+
+.modal-header, .modal-footer {
+  border-color: var(--glass-border);
+}
+
+.form-control, .form-select {
+  background-color: var(--surface-medium);
+  border-color: var(--glass-border);
+  color: var(--text-primary);
+}
+
+.form-control:focus, .form-select:focus {
+  background-color: var(--surface-medium);
+  border-color: var(--primary-color);
+  color: var(--text-primary);
+  box-shadow: 0 0 0 0.25rem rgba(37, 99, 235, 0.15);
+}
+
+.btn-primary {
+  background-color: var(--primary-color);
+  border-color: var(--primary-color);
+}
+
+.btn-primary:hover {
+  background-color: var(--accent-color);
+  border-color: var(--accent-color);
+}
+
+.btn-secondary {
+  background-color: var(--surface-light);
+  border-color: var(--surface-light);
+}
+
+.btn-secondary:hover {
+  background-color: var(--surface-medium);
+  border-color: var(--surface-medium);
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.4s ease-out forwards;
+}
