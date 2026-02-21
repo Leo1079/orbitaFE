@@ -21,7 +21,7 @@ const Navigation = () => {
           to="/"
           className="fw-bold d-flex align-items-center gap-2"
         >
-          <span className="text-primary">Ferre</span>Pinedo
+          <span className="text-primary">Ferreteria</span>Piñeiro
         </Navbar.Brand>
         <Navbar.Toggle aria-controls="basic-navbar-nav" />
         <Navbar.Collapse id="basic-navbar-nav">
