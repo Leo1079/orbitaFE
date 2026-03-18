@@ -12,6 +12,9 @@ import {
   Col,
   Badge,
   Spinner,
+  Card,
+  Container,
+  Stack,
 } from "react-bootstrap";
 import {
   FaShoppingCart,
@@ -19,7 +22,6 @@ import {
   FaMoneyBill,
   FaCreditCard,
   FaStore,
-  FaCalculator,
 } from "react-icons/fa";
 import Swal from "sweetalert2";
 import ProductCard from "../components/ProductCard";
@@ -38,20 +40,16 @@ const VentasPage = () => {
   const [paymentMethod, setPaymentMethod] = useState("EFECTIVO");
   const [loadingPay, setLoadingPay] = useState(false);
   const [cashReceived, setCashReceived] = useState("");
-  const [showCashInput, setShowCashInput] = useState(true);
 
-  // --- CÁLCULOS MEMOIZADOS ---
   const cartTotal = useMemo(
     () => cart.reduce((acc, item) => acc + item.subtotal, 0),
     [cart],
   );
-
   const cartItemsCount = useMemo(
     () => cart.reduce((acc, item) => acc + item.cantidad, 0),
     [cart],
   );
 
-  // CORRECCIÓN: Definición de changeAmount
   const changeAmount = useMemo(() => {
     const received = parseFloat(cashReceived) || 0;
     return received > 0 ? received - cartTotal : 0;
@@ -59,14 +57,13 @@ const VentasPage = () => {
 
   const filteredProducts = useMemo(() => {
     if (!products) return [];
-    const searchLower = searchTerm.toLowerCase().trim();
-    if (!searchLower) return products.filter((p) => p.activo);
-    return products.filter(
-      (p) => p.activo && p.nombre.toLowerCase().includes(searchLower),
+    const active = products.filter((p) => p.activo);
+    if (!searchTerm.trim()) return active;
+    return active.filter((p) =>
+      p.nombre.toLowerCase().includes(searchTerm.toLowerCase()),
     );
   }, [products, searchTerm]);
 
-  // --- CALLBACKS ---
   const handleAddToCart = useCallback((product) => {
     if (!product.activo || product.stock <= 0)
       return Swal.fire("Stock", "Producto sin stock o inactivo", "warning");
@@ -89,7 +86,8 @@ const VentasPage = () => {
               }
             : item,
         );
-      }      return [
+      }
+      return [
         ...prevCart,
         {
           id_producto: product.id_producto,
@@ -101,7 +99,6 @@ const VentasPage = () => {
       ];
     });
   }, []);
-
 
   const handleRemoveFromCart = useCallback((id) => {
     setCart((prevCart) => prevCart.filter((item) => item.id_producto !== id));
@@ -206,161 +203,191 @@ const VentasPage = () => {
   }, [dispatch]);
 
   return (
-    <div className="ventas-page animate-fade-in">
-      <div className="ventas-header mb-4">
-        <div className="d-flex align-items-center justify-content-between">
-          <div className="d-flex align-items-center gap-3">
-            <div className="icon-wrapper bg-primary">
-              <FaStore className="text-white" />
+    <Container fluid className="px-4 bg-light min-vh-70">
+      {/* Header Estilo Dashboard */}
+      <Card className="border-0 shadow-sm mb-4 overflow-hidden">
+        <Card.Body className="px-3">
+          <div className="d-flex align-items-center justify-content-between flex-wrap gap-3">
+            <div className="d-flex align-items-center gap-3">
+              <div className="bg-primary text-white p-3 rounded-3 shadow-sm">
+                <FaStore size={24} />
+              </div>
+              <div>
+                <h4 className="mb-0 fw-bold text-dark">Punto de Venta</h4>
+                <small className="text-muted">Orbita POS v1.0</small>
+              </div>
             </div>
-            <div>
-              <h1 className="h3 mb-0 fw-bold text-white">Punto de Venta</h1>
-              <p className="text-white mb-0">Gestión de facturación rápida</p>
-            </div>
+
+            <Badge
+              pill
+              bg={cajaStatus === "open" ? "success" : "danger"}
+              className="px-3 py-2 fw-semibold shadow-sm"
+            >
+              <span className="me-2">•</span>
+              {cajaStatus === "open" ? "CAJA ABIERTA" : "CAJA CERRADA"}
+            </Badge>
           </div>
-          <Badge
-            bg={cajaStatus === "open" ? "success" : "danger"}
-            className="p-2 px-3"
-          >
-            {cajaStatus === "open" ? "CAJA ABIERTA" : "● CAJA CERRADA"}
-          </Badge>
-        </div>
-      </div>
+        </Card.Body>
+      </Card>
 
       <Row className="g-4">
+        {/* Sección de Productos */}
         <Col lg={8}>
-          <div className="search-container mb-3">
-            <InputGroup className="glass-input-group">
-              <InputGroup.Text className="bg-transparent border-0 text-white">
+          <div className="mb-4">
+            <InputGroup className="shadow-sm border-0 bg-white rounded-pill overflow-hidden px-3">
+              <InputGroup.Text className="bg-white border-0 text-muted">
                 <FaSearch />
               </InputGroup.Text>
               <FormControl
-                placeholder="Buscar por nombre de producto..."
-                className="bg-transparent text-white border-0 shadow-none"
+                placeholder="Busca por nombre o código de barras..."
+                className="border-0 py-3 no-focus"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </InputGroup>
           </div>
 
-          <div className="products-grid-scroll">
+          <div className="product-grid-container">
             {filteredProducts.length > 0 ? (
-              <div className="products-grid">
+              <Row xs={1} md={2} xl={3} className="g-3">
                 {filteredProducts.map((product) => (
-                  <ProductCard
-                    key={product.id_producto}
-                    product={product}
-                    onAddToCart={handleAddToCart}
-                  />
+                  <Col key={product.id_producto}>
+                    <ProductCard
+                      product={product}
+                      onAddToCart={handleAddToCart}
+                    />
+                  </Col>
                 ))}
-              </div>
+              </Row>
             ) : (
-              <div className="text-center py-5 text-white">
-                No se encontraron productos
+              <div className="text-center py-5 opacity-50">
+                <FaSearch size={50} className="mb-3" />
+                <h5>No se encontraron productos</h5>
               </div>
             )}
           </div>
         </Col>
 
+        {/* Sección del Carrito */}
         <Col lg={4}>
-          <div className="cart-panel glass-panel">
-            <div className="cart-header-compact d-flex justify-content-between align-items-center mb-3">
-              <h5 className="mb-0 text-white">
-                <FaShoppingCart className="me-2" />
-                Carrito
-              </h5>
-              <Badge pill bg="primary">
-                {cartItemsCount}
-              </Badge>
-            </div>
-
-            <div className="cart-items-list mb-3">
-              {cart.map((item) => (
-                <CartItem
-                  key={item.id_producto}
-                  item={item}
-                  onQuantityChange={handleQuantityChange}
-                  onRemove={handleRemoveFromCart}
-                />
-              ))}
-              {cart.length === 0 && (
-                <p className="text-center text-white py-4">Carrito vacío</p>
-              )}
-            </div>
-
-            <div className="cart-summary p-3 rounded bg-dark-soft">
-              <div className="d-flex justify-content-between mb-2">
-                <span className="text-white">Total a pagar:</span>
-                <h4 className="text-success mb-0">${cartTotal.toFixed(2)}</h4>
+          <Card
+            className="border-0 shadow sticky-top"
+            style={{ top: "2rem", height: "calc(100vh - 100px)" }}
+          >
+            <Card.Header className="bg-white border-bottom-0 py-3">
+              <div className="d-flex justify-content-between align-items-center">
+                <h5 className="mb-0 fw-bold d-flex align-items-center gap-2">
+                  <FaShoppingCart className="text-primary" /> Carrito
+                </h5>
+                <Badge bg="primary" pill>
+                  {cartItemsCount} items
+                </Badge>
               </div>
+            </Card.Header>
 
-              <div className="payment-toggle d-flex gap-2 mb-3">
-                <Button
-                  variant={
-                    paymentMethod === "EFECTIVO"
-                      ? "primary"
-                      : "outline-secondary"
-                  }
-                  className="flex-grow-1 btn-sm"
-                  onClick={() => handlePaymentMethodChange("EFECTIVO")}
-                >
-                  <FaMoneyBill className="me-1" /> Efectivo
-                </Button>
-                <Button
-                  variant={
-                    paymentMethod === "TRANSFERENCIA"
-                      ? "primary"
-                      : "outline-secondary"
-                  }
-                  className="flex-grow-1 btn-sm"
-                  onClick={() => handlePaymentMethodChange("TRANSFERENCIA")}
-                >
-                  <FaCreditCard className="me-1" /> Transf.
-                </Button>
-              </div>
-
-              {showCashInput && (
-                <div className="cash-calculation p-2 rounded bg-black-20 mb-3">
-                  <Form.Label className="small text-white mb-1">
-                    Monto Recibido
-                  </Form.Label>
-                  <InputGroup size="sm" className="mb-2">
-                    <InputGroup.Text className="bg-transparent border-secondary text-white">
-                      $
-                    </InputGroup.Text>
-                    <FormControl
-                      type="number"
-                      className="bg-transparent text-white border-secondary"
-                      value={cashReceived}
-                      onChange={(e) => setCashReceived(e.target.value)}
-                    />
-                  </InputGroup>
-                  <div className="d-flex justify-content-between align-items-center mt-2">
-                    <span className="small text-white">Vuelto:</span>
-                    <span
-                      className={`fw-bold ${changeAmount >= 0 ? "text-info" : "text-danger"}`}
-                    >
-                      ${changeAmount.toFixed(2)}
-                    </span>
-                  </div>
+            <Card.Body className="overflow-auto py-0">
+              {cart.length > 0 ? (
+                cart.map((item) => (
+                  <CartItem
+                    key={item.id_producto}
+                    item={item}
+                    onQuantityChange={handleQuantityChange}
+                    onRemove={handleRemoveFromCart}
+                  />
+                ))
+              ) : (
+                <div className="text-center mt-5 opacity-25">
+                  <FaShoppingCart size={80} />
+                  <p className="mt-2 fw-bold text-uppercase">Carrito Vacío</p>
                 </div>
               )}
+            </Card.Body>
 
-              <Button
-                variant="success"
-                className="w-100 py-2 fw-bold"
-                onClick={handleProcessSale}
-                disabled={
-                  loadingPay || cart.length === 0 || cajaStatus !== "open"
-                }
-              >
-                {loadingPay ? <Spinner size="sm" /> : "FINALIZAR VENTA"}
-              </Button>
-            </div>
-          </div>
+            <Card.Footer className="bg-white border-top-0 p-4">
+              <Stack gap={3}>
+                <div className="d-flex justify-content-between align-items-center">
+                  <span className="text-muted h6 mb-0">Total a pagar:</span>
+                  <span className="h3 fw-bold text-success mb-0">
+                    ${cartTotal.toFixed(2)}
+                  </span>
+                </div>
+
+                <div className="d-flex gap-2">
+                  <Button
+                    variant={
+                      paymentMethod === "EFECTIVO"
+                        ? "primary"
+                        : "outline-primary"
+                    }
+                    className="w-100 py-2 d-flex align-items-center justify-content-center gap-2 shadow-sm"
+                    onClick={() => handlePaymentMethodChange("EFECTIVO")}
+                  >
+                    <FaMoneyBill /> Efectivo
+                  </Button>
+                  <Button
+                    variant={
+                      paymentMethod === "TRANSFERENCIA"
+                        ? "primary"
+                        : "outline-primary"
+                    }
+                    className="w-100 py-2 d-flex align-items-center justify-content-center gap-2 shadow-sm"
+                    onClick={() => handlePaymentMethodChange("TRANSFERENCIA")}
+                  >
+                    <FaCreditCard /> Transf.
+                  </Button>
+                </div>
+
+                {paymentMethod === "EFECTIVO" && (
+                  <div className="bg-light p-3 rounded-3">
+                    <Form.Group className="mb-2">
+                      <Form.Label className="small fw-bold text-muted">
+                        Monto Recibido
+                      </Form.Label>
+                      <InputGroup size="lg">
+                        <InputGroup.Text className="bg-white border-end-0 text-success fw-bold">
+                          $
+                        </InputGroup.Text>
+                        <FormControl
+                          type="number"
+                          className="border-start-0 no-focus"
+                          placeholder="0.00"
+                          value={cashReceived}
+                          onChange={(e) => setCashReceived(e.target.value)}
+                        />
+                      </InputGroup>
+                    </Form.Group>
+                    <div className="d-flex justify-content-between align-items-center">
+                      <span className="small fw-bold text-muted">Vuelto:</span>
+                      <span
+                        className={`fw-bold h5 mb-0 ${changeAmount >= 0 ? "text-primary" : "text-danger"}`}
+                      >
+                        ${changeAmount.toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                <Button
+                  variant="success"
+                  size="lg"
+                  className="w-100 py-3 fw-bold shadow mt-2"
+                  onClick={handleProcessSale}
+                  disabled={
+                    loadingPay || cart.length === 0 || cajaStatus !== "open"
+                  }
+                >
+                  {loadingPay ? (
+                    <Spinner size="sm" animation="border" />
+                  ) : (
+                    "FINALIZAR VENTA"
+                  )}
+                </Button>
+              </Stack>
+            </Card.Footer>
+          </Card>
         </Col>
       </Row>
-    </div>
+    </Container>
   );
 };
 

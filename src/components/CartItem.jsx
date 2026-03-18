@@ -16,47 +16,48 @@ const CartItem = React.memo(({ item, onQuantityChange, onRemove }) => {
   };
 
   return (
-    <div className="cart-item">
-      <div className="item-info">
-        <h6 className="item-name">{item.nombre}</h6>
-        <p className="item-price">${item.precio.toFixed(2)} c/u</p>
-      </div>
-      
-      <div className="item-controls">
-        <div className="quantity-controls">
-          <Button
-            size="sm"
-            variant="outline-secondary"
-            className="quantity-btn"
-            onClick={handleDecrease}
-            disabled={item.cantidad <= 1}
-            aria-label="Disminuir cantidad"
-          >
-            <FaMinus />
-          </Button>
-          <span className="quantity-display">{item.cantidad}</span>
-          <Button
-            size="sm"
-            variant="outline-secondary"
-            className="quantity-btn"
-            onClick={handleIncrease}
-            aria-label="Aumentar cantidad"
-          >
-            <FaPlus />
-          </Button>
-        </div>
-        
-        <div className="item-total">
-          <span className="total-amount">${item.subtotal.toFixed(2)}</span>
-          <Button
-            size="sm"
-            variant="outline-danger"
-            className="remove-btn"
-            onClick={handleRemove}
-            aria-label={`Eliminar ${item.nombre} del carrito`}
-          >
-            <FaTrash />
-          </Button>
+    <div className="orbita-card mb-2 cart-item">
+      <div className="orbita-card-body">
+        <div className="orbita-flex-between">
+          <div className="item-info">
+            <h6 className="orbita-card-title mb-1">{item.nombre}</h6>
+            <p className="orbita-text-secondary mb-0">${item.precio.toFixed(2)} c/u</p>
+          </div>
+          
+          <div className="item-controls">
+            <div className="orbita-flex-center gap-2 mb-2">
+              <Button
+                size="sm"
+                className="orbita-btn orbita-btn-outline"
+                onClick={handleDecrease}
+                disabled={item.cantidad <= 1}
+                aria-label="Disminuir cantidad"
+              >
+                <FaMinus />
+              </Button>
+              <span className="orbita-text-primary fw-bold px-2">{item.cantidad}</span>
+              <Button
+                size="sm"
+                className="orbita-btn orbita-btn-outline"
+                onClick={handleIncrease}
+                aria-label="Aumentar cantidad"
+              >
+                <FaPlus />
+              </Button>
+            </div>
+            
+            <div className="orbita-flex-between">
+              <span className="orbita-text-success fw-bold">${item.subtotal.toFixed(2)}</span>
+              <Button
+                size="sm"
+                className="orbita-btn orbita-btn-danger"
+                onClick={handleRemove}
+                aria-label={`Eliminar ${item.nombre} del carrito`}
+              >
+                <FaTrash />
+              </Button>
+            </div>
+          </div>
         </div>
       </div>
     </div>

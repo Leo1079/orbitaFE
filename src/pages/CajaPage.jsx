@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useCallback } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
   getCashRegister,
@@ -6,7 +6,7 @@ import {
   openCashRegister,
   closeCashRegister,
 } from "../store/slices/cashSlice";
-import { Button, Form, Modal, Badge, Alert } from "react-bootstrap";
+import { Button, Form, Modal, Badge, Alert, InputGroup } from "react-bootstrap";
 import {
   FaCashRegister,
   FaLock,
@@ -15,6 +15,7 @@ import {
   FaChartLine,
   FaWallet,
   FaClock,
+  FaInfoCircle,
 } from "react-icons/fa";
 import Swal from "sweetalert2";
 import "./CajaPage.css";
@@ -32,378 +33,231 @@ const CajaPage = () => {
   const [showCloseModal, setShowCloseModal] = useState(false);
   const [montoInicial, setMontoInicial] = useState("");
   const [montoFinal, setMontoFinal] = useState("");
+  const [notas, setNotas] = useState("");
 
-  // Memoized stats
+  // Lógica de Balance Global
   const stats = useMemo(() => {
-    if (!cajaData) {
-      return {
-        initial: 0,
-        current: 0,
-        sales: 0,
-        expenses: 0,
-        difference: 0,
-      };
-    }
-    const initial = Number(cajaData.monto_inicial) || 0;
-    const sales = Number(cajaData.total_ventas) || 0;
-    const expenses = Number(cajaData.total_gastos) || 0;
-
-    // --- AQUÍ ESTÁ TU FÓRMULA ---
-    // Balance Actual = Inicial + Ventas - Gastos
-    const current = initial + sales - expenses;
+    const initial = Number(cajaData?.monto_inicial) || 0;
+    const totalSales = Number(cajaData?.total_ventas) || 0; // Suma de todos los métodos
+    const totalExpenses = Number(cajaData?.total_gastos) || 0;
+    
+    // Balance Global = Lo que había + Todo lo que entró - Todo lo que salió
+    const globalBalance = initial + totalSales - totalExpenses;
+    
+    const finalInput = Number(montoFinal) || 0;
+    const balanceDiff = finalInput - globalBalance;
 
     return {
       initial,
-      current,
-      sales,
-      expenses,
-      difference: current - initial, // Esto te dirá cuánto dinero neto entró/salió
+      globalBalance,
+      totalSales,
+      totalExpenses,
+      balanceDiff,
+      totalTransacciones: cajaData?.total_transacciones || 0
     };
-  }, [cajaData]);
+  }, [cajaData, montoFinal]);
 
   useEffect(() => {
     dispatch(getActiveCash());
   }, [dispatch]);
 
-  const handleOpenCaja = useCallback(
-    async (e) => {
-      e.preventDefault();
-      try {
-        const resultAction = await dispatch(
-          openCashRegister({ monto_inicial: parseFloat(montoInicial) }),
-        );
-        if (openCashRegister.fulfilled.match(resultAction)) {
-          Swal.fire(
-            "Caja Abierta",
-            "La caja se ha abierto correctamente",
-            "success",
-          );
-          setShowOpenModal(false);
-          const newId = resultAction.payload;
-          dispatch(getCashRegister(newId));
-          setMontoInicial("");
-        } else {
-          throw new Error(resultAction.error.message);
-        }
-      } catch (err) {
-        Swal.fire("Error", "No se pudo abrir la caja", "error");
-      }
-    },
-    [montoInicial, dispatch],
-  );
+  const handleCloseModals = () => {
+    setShowOpenModal(false);
+    setShowCloseModal(false);
+    setMontoInicial("");
+    setMontoFinal("");
+    setNotas("");
+  };
 
-  const handleCloseCaja = useCallback(
-    async (e) => {
-      e.preventDefault();
-      if (!currentCajaId)
-        return Swal.fire("Error", "No se identifica la caja a cerrar", "error");
-      try {
-        await dispatch(
-          closeCashRegister({
-            id_caja: currentCajaId,
-            monto_final: parseFloat(montoFinal),
-          }),
-        ).unwrap();
-        Swal.fire(
-          "Caja Cerrada",
-          "La caja se ha cerrado correctamente",
-          "success",
-        );
-        setShowCloseModal(false);
-        dispatch(getCashRegister(currentCajaId));
-        setMontoFinal("");
-      } catch (err) {
-        Swal.fire("Error", "No se pudo cerrar la caja", "error");
-      }
-    },
-    [currentCajaId, montoFinal, dispatch],
-  );
+  const handleOpenCaja = async (e) => {
+    e.preventDefault();
+    try {
+      const resultAction = await dispatch(
+        openCashRegister({ monto_inicial: parseFloat(montoInicial) })
+      ).unwrap();
+      Swal.fire("¡Éxito!", "Operación de caja iniciada", "success");
+      handleCloseModals();
+      dispatch(getCashRegister(resultAction.id || resultAction));
+    } catch (err) {
+      Swal.fire("Error", "No se pudo abrir la caja", "error");
+    }
+  };
+
+  const handleCloseCaja = async (e) => {
+    e.preventDefault();
+    if (!currentCajaId) return;
+
+    try {
+      await dispatch(
+        closeCashRegister({
+          id_caja: currentCajaId,
+          monto_final: parseFloat(montoFinal),
+          notas: notas
+        })
+      ).unwrap();
+      
+      Swal.fire("Caja Cerrada", "El balance global ha sido registrado", "success");
+      handleCloseModals();
+      dispatch(getActiveCash());
+    } catch (err) {
+      Swal.fire("Error", "Hubo un problema al cerrar el balance", "error");
+    }
+  };
 
   return (
-    <div className="caja-page">
+    <div className="caja-page p-4 bg-light min-vh-100">
       {/* Header */}
-      <div className="page-header">
+      <div className="d-flex justify-content-between align-items-center mb-4">
         <div className="d-flex align-items-center gap-3">
-          <div className="icon-wrapper">
-            <FaCashRegister className="header-icon" />
+          <div className="p-3 bg-primary text-white rounded-3 shadow-sm">
+            <FaCashRegister size={24} />
           </div>
           <div>
-            <h1 className="page-title">Control de Caja</h1>
-            <p className="page-subtitle">
-              Gestiona el flujo de dinero de tu negocio
-            </p>
+            <h2 className="fw-bold mb-0">Balance de Caja</h2>
+            <p className="text-muted mb-0">Seguimiento global de ingresos y egresos</p>
           </div>
+        </div>
+        
+        <div className="text-end">
+           <Badge bg={cajaStatus === "open" ? "success" : "secondary"} className="px-3 py-2 rounded-pill">
+             {cajaStatus === "open" ? "TURNO ACTIVO" : "CAJA CERRADA"}
+           </Badge>
+           <div className="text-muted small mt-1">
+             <FaClock className="me-1"/> 
+             {cajaData?.fecha_apertura ? new Date(cajaData.fecha_apertura).toLocaleTimeString() : "--:--"}
+           </div>
         </div>
       </div>
 
-      {/* Status Card */}
-      <div className="status-section">
-        <div className="status-card">
-          <div className="status-header">
-            <div className="status-info">
-              <h3 className="status-title">Estado Actual</h3>
-              <div className="status-badge-wrapper">
-                {cajaStatus === "open" ? (
-                  <Badge bg="success" className="status-badge open">
-                    <FaLockOpen /> ABIERTA
-                  </Badge>
-                ) : (
-                  <Badge bg="danger" className="status-badge closed">
-                    <FaLock /> CERRADA
-                  </Badge>
-                )}
-              </div>
-            </div>
-            <div className="status-time">
-              <FaClock className="time-icon" />
-              <span className="time-text">
-                {cajaData?.fecha_apertura
-                  ? new Date(cajaData.fecha_apertura).toLocaleTimeString()
-                  : "--:--"}
-              </span>
-            </div>
-          </div>
-
-          <div className="status-actions">
-            {cajaStatus === "closed" ? (
-              <Button
-                onClick={() => setShowOpenModal(true)}
-                className="action-btn open-btn"
-                disabled={loading}
-              >
-                <FaLockOpen /> Abrir Caja
-              </Button>
-            ) : (
-              <Button
-                onClick={() => setShowCloseModal(true)}
-                className="action-btn close-btn"
-                disabled={loading}
-              >
-                <FaLock /> Cerrar Caja
-              </Button>
-            )}
-          </div>
-        </div>
+      {/* Botones de acción */}
+      <div className="mb-4">
+        {cajaStatus === "closed" ? (
+          <Button onClick={() => setShowOpenModal(true)} className="w-100 py-3 fw-bold" variant="primary">
+            INICIAR NUEVA JORNADA
+          </Button>
+        ) : (
+          <Button onClick={() => setShowCloseModal(true)} className="w-100 py-3 fw-bold" variant="dark">
+            REGISTRAR BALANCE FINAL Y CERRAR
+          </Button>
+        )}
       </div>
 
-      {/* Stats Grid */}
-      <div className="stats-grid">
-        <div className="stat-card initial">
-          <div className="stat-icon">
-            <FaWallet />
-          </div>
-          <div className="stat-content">
-            <div className="stat-label">Monto Inicial</div>
-            <div className="stat-value">${stats.initial.toFixed(2)}</div>
-          </div>
-        </div>
-
-        <div className="stat-card sales">
-          <div className="stat-icon">
-            <FaChartLine />
-          </div>
-          <div className="stat-content">
-            <div className="stat-label">Ventas</div>
-            <div className="stat-value">${stats.sales.toFixed(2)}</div>
-          </div>
-        </div>
-
-        <div className="stat-card expenses">
-          <div className="stat-icon">
-            <FaCashRegister />
-          </div>
-          <div className="stat-content">
-            <div className="stat-label">Gastos</div>
-            <div className="stat-value negative">
-              -${stats.expenses.toFixed(2)}
-            </div>
-          </div>
-        </div>
-
-        <div className="stat-card balance">
-          <div className="stat-icon">
-            <FaDollarSign />
-          </div>
-          <div className="stat-content">
-            <div className="stat-label">Balance Actual</div>
-            <div
-              className={`stat-value ${stats.current >= stats.initial ? "positive" : "negative"}`}
-            >
-              ${stats.current.toFixed(2)}
-            </div>
-          </div>
-        </div>
+      {/* Grid de Stats Globales */}
+      <div className="row g-3 mb-4">
+        <StatCard label="Fondo Inicial" value={stats.initial} icon={<FaWallet/>} color="primary" />
+        <StatCard label="Ingresos Totales" value={stats.totalSales} icon={<FaChartLine/>} color="success" />
+        <StatCard label="Egresos Totales" value={stats.totalExpenses} icon={<FaDollarSign/>} color="danger" isNegative />
+        <StatCard label="Balance Global" value={stats.globalBalance} icon={<FaCashRegister/>} color="warning" />
       </div>
 
-      {/* Summary Card */}
+      {/* Resumen */}
       {cajaStatus === "open" && (
-        <div className="summary-card">
-          <h4 className="summary-title">Resumen del Día</h4>
-          <div className="summary-content">
-            <div className="summary-item">
-              <span className="summary-label">Diferencia:</span>
-              <span
-                className={`summary-value ${stats.difference >= 0 ? "positive" : "negative"}`}
-              >
-                {stats.difference >= 0 ? "+" : ""}${stats.difference.toFixed(2)}
-              </span>
+        <div className="bg-white p-4 rounded-4 shadow-sm border-0">
+          <h5 className="fw-bold mb-3"><FaInfoCircle className="me-2 text-primary"/> Detalles del Turno</h5>
+          <div className="row text-center">
+            <div className="col-6 border-end">
+              <div className="text-muted small">Rendimiento (Ventas - Gastos)</div>
+              <h4 className="fw-bold text-dark">
+                ${(stats.totalSales - stats.totalExpenses).toFixed(2)}
+              </h4>
             </div>
-            <div className="summary-item">
-              <span className="summary-label">Transacciones:</span>
-              <span className="summary-value">
-                {cajaData?.total_transacciones || 0}
-              </span>
+            <div className="col-6">
+              <div className="text-muted small">Operaciones Realizadas</div>
+              <h4 className="fw-bold">{stats.totalTransacciones}</h4>
             </div>
           </div>
         </div>
       )}
 
-      {/* Modal Apertura */}
-      <Modal
-        show={showOpenModal}
-        onHide={() => setShowOpenModal(false)}
-        centered
-        contentClassName="modern-modal"
-      >
+      {/* Modales actualizados con lenguaje de "Balance Global" */}
+      <Modal show={showOpenModal} onHide={handleCloseModals} centered>
         <Modal.Header closeButton className="border-0">
-          <Modal.Title className="modal-title">
-            <FaLockOpen className="me-2" />
-            Abrir Caja
-          </Modal.Title>
+          <Modal.Title className="fw-bold">Apertura de Caja</Modal.Title>
         </Modal.Header>
-        <Modal.Body>
-          <Form onSubmit={handleOpenCaja}>
-            <Form.Group className="mb-4">
-              <Form.Label className="form-label">
-                Monto Inicial en Efectivo
-              </Form.Label>
-              <Form.Control
-                type="number"
-                step="0.01"
-                required
-                className="form-control-modern"
-                placeholder="0.00"
-                value={montoInicial}
-                onChange={(e) => setMontoInicial(e.target.value)}
-              />
-              <Form.Text className="text-muted">
-                Ingresa el dinero físico que tienes al iniciar la jornada
-              </Form.Text>
+        <Form onSubmit={handleOpenCaja}>
+          <Modal.Body>
+            <Form.Group>
+              <Form.Label className="small fw-bold">SALDO INICIAL DISPONIBLE</Form.Label>
+              <InputGroup size="lg">
+                <InputGroup.Text>$</InputGroup.Text>
+                <Form.Control
+                  type="number"
+                  step="0.01"
+                  required
+                  value={montoInicial}
+                  onChange={(e) => setMontoInicial(e.target.value)}
+                />
+              </InputGroup>
             </Form.Group>
-            <div className="d-flex gap-2">
-              <Button
-                variant="outline-light"
-                onClick={() => setShowOpenModal(false)}
-                className="cancel-btn flex-fill"
-              >
-                Cancelar
-              </Button>
-              <Button
-                type="submit"
-                variant="success"
-                className="submit-btn flex-fill"
-                disabled={loading}
-              >
-                {loading ? "Abriendo..." : "Abrir Ahora"}
-              </Button>
-            </div>
-          </Form>
-        </Modal.Body>
+          </Modal.Body>
+          <Modal.Footer className="border-0">
+            <Button variant="success" type="submit" className="w-100 py-2">Confirmar Apertura</Button>
+          </Modal.Footer>
+        </Form>
       </Modal>
 
-      {/* Modal Cierre */}
-      <Modal
-        show={showCloseModal}
-        onHide={() => setShowCloseModal(false)}
-        centered
-        contentClassName="modern-modal"
-      >
+      <Modal show={showCloseModal} onHide={handleCloseModals} centered>
         <Modal.Header closeButton className="border-0">
-          <Modal.Title className="modal-title">
-            <FaLock className="me-2" />
-            Cerrar Caja
-          </Modal.Title>
+          <Modal.Title className="fw-bold">Cierre de Balance</Modal.Title>
         </Modal.Header>
-        <Modal.Body>
-          <Alert variant="info" className="modern-alert">
-            <FaCashRegister className="me-2" />
-            Verifica el dinero físico antes de cerrar la caja.
-          </Alert>
+        <Form onSubmit={handleCloseCaja}>
+          <Modal.Body>
+            <div className="p-3 bg-light rounded-3 mb-4 text-center">
+              <div className="text-muted small">Balance del Sistema (Esperado)</div>
+              <h3 className="fw-bold text-primary">${stats.globalBalance.toFixed(2)}</h3>
+            </div>
 
-          <div className="balance-summary">
-            <div className="summary-row">
-              <span>Monto Inicial:</span>
-              <span className="summary-amount">
-                ${stats.initial.toFixed(2)}
-              </span>
-            </div>
-            <div className="summary-row">
-              <span>Ventas del día:</span>
-              <span className="summary-amount positive">
-                +${stats.sales.toFixed(2)}
-              </span>
-            </div>
-            <div className="summary-row">
-              <span>Gastos del día:</span>
-              <span className="summary-amount negative">
-                -${stats.expenses.toFixed(2)}
-              </span>
-            </div>
-            <div className="summary-divider"></div>
-            <div className="summary-row total">
-              <span>Balance esperado:</span>
-              <span className="summary-amount">
-                ${stats.current.toFixed(2)}
-              </span>
-            </div>
-          </div>
-
-          <Form onSubmit={handleCloseCaja}>
             <Form.Group className="mb-3">
-              <Form.Label className="form-label">
-                Monto Final Real (Arqueo)
-              </Form.Label>
-              <Form.Control
-                type="number"
-                step="0.01"
-                required
-                className="form-control-modern"
-                placeholder="0.00"
-                value={montoFinal}
-                onChange={(e) => setMontoFinal(e.target.value)}
-              />
+              <Form.Label className="fw-bold small">MONTO DE CIERRE REGISTRADO</Form.Label>
+              <InputGroup size="lg">
+                <InputGroup.Text>$</InputGroup.Text>
+                <Form.Control
+                  type="number"
+                  step="0.01"
+                  required
+                  placeholder="Ingrese el monto final"
+                  value={montoFinal}
+                  onChange={(e) => setMontoFinal(e.target.value)}
+                />
+              </InputGroup>
             </Form.Group>
-            <Form.Group className="mb-4">
-              <Form.Label className="form-label">Notas (opcional)</Form.Label>
-              <Form.Control
-                as="textarea"
-                rows={3}
-                className="form-control-modern"
-                placeholder="Observaciones sobre el cierre de caja..."
-              />
+
+            {montoFinal && (
+              <Alert variant={Math.abs(stats.balanceDiff) < 0.01 ? "success" : "warning"}>
+                Diferencia contra sistema: <strong>${stats.balanceDiff.toFixed(2)}</strong>
+              </Alert>
+            )}
+
+            <Form.Group>
+              <Form.Label className="fw-bold small">NOTAS / OBSERVACIONES</Form.Label>
+              <Form.Control as="textarea" rows={2} value={notas} onChange={(e) => setNotas(e.target.value)} />
             </Form.Group>
-            <div className="d-flex gap-2">
-              <Button
-                variant="outline-light"
-                onClick={() => setShowCloseModal(false)}
-                className="cancel-btn flex-fill"
-              >
-                Cancelar
-              </Button>
-              <Button
-                type="submit"
-                variant="danger"
-                className="submit-btn flex-fill"
-                disabled={loading}
-              >
-                {loading ? "Cerrando..." : "Cerrar Caja"}
-              </Button>
-            </div>
-          </Form>
-        </Modal.Body>
+          </Modal.Body>
+          <Modal.Footer className="border-0">
+            <Button variant="primary" type="submit" className="w-100 py-2">Finalizar y Guardar Balance</Button>
+          </Modal.Footer>
+        </Form>
       </Modal>
     </div>
   );
 };
+
+const StatCard = ({ label, value, icon, color, isNegative, highlight }) => (
+  <div className="col-md-3">
+    <div className={`card border-0 shadow-sm rounded-4 ${highlight ? `bg-primary text-white` : 'bg-white'}`}>
+      <div className="card-body p-3">
+        <div className="d-flex justify-content-between align-items-start mb-2">
+          <div className={`p-2 rounded-2 ${highlight ? 'bg-white bg-opacity-25' : `bg-${color} bg-opacity-10 text-${color}`}`}>
+            {icon}
+          </div>
+        </div>
+        <div className={highlight ? "text-white-50 small" : "text-muted small"}>{label}</div>
+        <h4 className="fw-bold mb-0">
+          {isNegative ? "-" : ""}${Math.abs(value).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+        </h4>
+      </div>
+    </div>
+  </div>
+);
 
 export default CajaPage;
